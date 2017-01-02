@@ -60,7 +60,8 @@ Item {
 			var systemModel = rootModel.modelForRow(rootModel.count - 1)
 			var systemList = []
 			powerActionsModel.parseModel(systemList, systemModel)
-			powerActionsModel.list = systemList;
+			powerActionsModel.list = systemList
+			sessionActionsModel.parseSourceModel(powerActionsModel)
 
 			debouncedRefresh.restart()
 		}
@@ -117,7 +118,9 @@ Item {
 			
 			Item {
 				Component.onCompleted: {
-					debouncedRefresh.restart()
+					if (plasmoid.configuration.showRecentApps) {
+						debouncedRefreshRecentApps.restart()
+					}
 				}
 			}
 		}
@@ -151,6 +154,12 @@ Item {
 			interval: 100
 			onTriggered: allAppsModel.refresh()
 		}
+
+		Timer {
+			id: debouncedRefreshRecentApps
+			interval: debouncedRefresh.interval
+			onTriggered: allAppsModel.refreshRecentApps()
+		}
 		
 		Connections {
 			target: plasmoid.configuration
@@ -158,12 +167,49 @@ Item {
 		}
 	}
 
-
 	KickerListModel {
 		id: powerActionsModel
 		onItemTriggered: {
 			console.log('powerActionsModel.onItemTriggered')
-			plasmoid.expanded = false;
+			plasmoid.expanded = false
+		}
+		
+		function nameByIconName(iconName) {
+			var item = getByValue('iconName', iconName)
+			if (item) {
+				return item.name
+			} else {
+				return iconName
+			}
+		}
+
+		function triggerByIconName(iconName) {
+			var item = getByValue('iconName', iconName)
+			item.parentModel.trigger(item.indexInParent, "", null)
+		}
+	}
+
+	// powerActionsModel filtered to logout/lock/switch user
+	property alias sessionActionsModel: sessionActionsModel
+	KickerListModel {
+		id: sessionActionsModel
+		onItemTriggered: {
+			console.log('sessionActionsModel.onItemTriggered')
+			plasmoid.expanded = false
+		}
+
+		function parseSourceModel(powerActionsModel) {
+			// Filter by iconName
+			var sessionActionsList = []
+			var sessionIconNames = ['system-lock-screen', 'system-log-out', 'system-save-session', 'system-switch-user']
+			for (var i = 0; i < powerActionsModel.list.length; i++) {
+				var item = powerActionsModel.list[i];
+				console.log(item, item.iconName, sessionIconNames.indexOf(item.iconName) >= 0)
+				if (sessionIconNames.indexOf(item.iconName) >= 0) {
+					sessionActionsList.push(item)
+				}
+			}
+			sessionActionsModel.list = sessionActionsList
 		}
 	}
 	
@@ -171,7 +217,7 @@ Item {
 		id: allAppsModel
 		onItemTriggered: {
 			console.log('allAppsModel.onItemTriggered')
-			plasmoid.expanded = false;
+			plasmoid.expanded = false
 		}
 
 		function getRecentApps() {
@@ -200,6 +246,32 @@ Item {
 			}
 
 			return recentAppList;
+		}
+
+		function refreshRecentApps() {
+			console.log('refreshRecentApps')
+			if (debouncedRefresh.running) {
+				// We're about to do a full refresh so don't bother doing a partial update.
+				return
+			}
+			var recentAppList = getRecentApps();
+			var recentAppCount = 5
+			if (recentAppCount == recentAppList.length) {
+				// Do a partial update since we're only updating properties.
+				refreshing()
+
+				// Overwrite the exisiting items.
+				for (var i = 0; i < recentAppList.length; i++) {
+					var item = recentAppList[i]
+					list[i] = item
+					set(i, item)
+				}
+
+				refreshed()
+			} else {
+				// We'll be removing items, so just replace the entire list.
+				refresh()
+			}
 		}
 
 		function refresh() {

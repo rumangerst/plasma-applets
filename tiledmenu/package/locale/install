@@ -6,11 +6,23 @@
 # TODO: check if run as root, and if so, install to /usr/share instead of ~/.local/share
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-plasmoidName=`kreadconfig --file="$DIR/../metadata.desktop" --group="Desktop Entry" --key="X-KDE-PluginInfo-Name"`
-website=`kreadconfig --file="$DIR/../metadata.desktop" --group="Desktop Entry" --key="X-KDE-PluginInfo-Website"`
+plasmoidName=`kreadconfig5 --file="$DIR/../metadata.desktop" --group="Desktop Entry" --key="X-KDE-PluginInfo-Name"`
+website=`kreadconfig5 --file="$DIR/../metadata.desktop" --group="Desktop Entry" --key="X-KDE-PluginInfo-Website"`
 bugAddress="$website"
 packageRoot=".." # Root of translatable sources
 projectName="plasma_applet_${plasmoidName}" # project name
+
+if [[ ! -z "$plasmoidName" ]]; then
+	echo "[install] Error: Couldn't read plasmoidName."
+	exit
+fi
+
+if [[ ! -z "$(which msgfmt)" ]]; then
+	echo "[install] Error: msgfmt command not found. Need to install gettext"
+	echo "[install] Running 'sudo apt install gettext'"
+	sudo apt install gettext
+	echo "[install] gettext installation should be finished. Going back to installing translations."
+fi
 
 #---
 echo "[install] Installing messages"

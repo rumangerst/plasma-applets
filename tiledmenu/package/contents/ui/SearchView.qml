@@ -60,8 +60,22 @@ Item {
 			SidebarItem {
 				iconName: kuser.faceIconUrl ? kuser.faceIconUrl : 'user-identity'
 				text: kuser.fullName
-				onClicked: KCMShell.open("user_manager")
-				visible: KCMShell.authorize("user_manager.desktop").length > 0
+				onClicked: userMenu.open = !userMenu.open
+
+				SidebarContextMenu {
+					id: userMenu
+
+					SidebarItem {
+						iconName: 'system-users'
+						text: i18n("User Manager")
+						onClicked: KCMShell.open('user_manager')
+						visible: KCMShell.authorize('user_manager.desktop').length > 0
+					}
+
+					SidebarItemRepeater {
+						model: appsModel.sessionActionsModel
+					}
+				}
 			}
 			SidebarItem {
 				iconName: 'folder-open-symbolic'
@@ -81,7 +95,10 @@ Item {
 
 				SidebarContextMenu {
 					id: powerMenu
-					model: appsModel.powerActionsModel
+					
+					SidebarItemRepeater {
+						model: appsModel.powerActionsModel
+					}
 				}
 			}
 		}
